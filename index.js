@@ -102,7 +102,7 @@ app.post("/view", upload.single("file.xlsx"), async (req, res) => {
     const data = xlsx.utils.sheet_to_json(sheet);
     const currentUsers = [];
     for (let i = 0; i < data.length; i++) {
-      const phone = data[i]["Phone 1 - Value"].replace(/[ +]/g, "");
+      const phone = data[i]["Phone 1 - Value"]?.replace(/[ +]/g, "");
       currentUsers.push({ phone });
       // ----------------------------------------------------------
     }
