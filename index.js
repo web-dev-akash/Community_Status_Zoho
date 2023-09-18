@@ -46,7 +46,7 @@ const getZohoToken = async () => {
   }
 };
 
-const updateContactOnZoho = async ({ phone, config }) => {
+const updateContactOnZoho = async ({ phone, config, group }) => {
   if (!Number(phone)) {
     return { phone, message: "Not a phone number" };
   }
@@ -57,9 +57,13 @@ const updateContactOnZoho = async ({ phone, config }) => {
   if (!contact || !contact.data || !contact.data.data) {
     return { phone, message: "No Contact Found" };
   }
+  const key = group.includes("Wisechampions")
+    ? "Joined_Wisechampions"
+    : "Joined_Toppers_Club";
   const contactId = contact.data.data[0].id;
-  const joinedWisechampions = contact.data.data[0].Joined_Wisechampions;
-  if (joinedWisechampions) {
+  const alreadyJoined = contact.data.data[0][key];
+  console.log(alreadyJoined);
+  if (alreadyJoined) {
     return { phone, message: "Already in Community" };
   }
   const date = new Date();
@@ -71,9 +75,9 @@ const updateContactOnZoho = async ({ phone, config }) => {
     data: [
       {
         id: contactId,
-        Joined_Wisechampions: formattedDate,
+        [key]: formattedDate,
         $append_values: {
-          Joined_Wisechampions: true,
+          [key]: true,
         },
       },
     ],
@@ -95,15 +99,15 @@ const updateContactOnZoho = async ({ phone, config }) => {
 
 app.post("/view", upload.single("file.xlsx"), async (req, res) => {
   try {
-    const date = new Date().toDateString();
     const workbook = xlsx.readFile("./uploads/file.xlsx");
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
     const data = xlsx.utils.sheet_to_json(sheet);
     const currentUsers = [];
     for (let i = 0; i < data.length; i++) {
-      const phone = data[i]["Phone 1 - Value"]?.replace(/[ +]/g, "");
-      currentUsers.push({ phone });
+      const phone = data[i]["Phone 1 - Value"]?.toString().replace(/[ +]/g, "");
+      const groupName = data[i]["Group Membership"];
+      currentUsers.push({ phone, groupName });
       // ----------------------------------------------------------
     }
     const token = await getZohoToken();
@@ -113,11 +117,11 @@ app.post("/view", upload.single("file.xlsx"), async (req, res) => {
         "Content-Type": "application/json",
       },
     };
-    // res.send({ currentUsers });
     const result = [];
     for (let i = 0; i < currentUsers.length; i++) {
       const data = await updateContactOnZoho({
         phone: currentUsers[i].phone,
+        group: currentUsers[i].groupName,
         config,
       });
       result.push(data);
