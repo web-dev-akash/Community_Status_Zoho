@@ -20,7 +20,7 @@ const PORT = process.env.PORT || 8080;
 const storage = multer.diskStorage({
   destination: path.join(__dirname, "uploads"),
   filename: function (req, file, cb) {
-    cb(null, file.fieldname);
+    cb(null, file.originalname);
   },
 });
 const upload = multer({ storage: storage });
@@ -97,18 +97,32 @@ const updateContactOnZoho = async ({ phone, config, group }) => {
   return { phone, message: "Success" };
 };
 
-app.post("/view", upload.single("file.xlsx"), async (req, res) => {
+app.post("/view", upload.array("file", 10), async (req, res) => {
+  const files = req.files;
+  console.log(files);
+  if (files.length === 0) {
+    return res
+      .status(400)
+      .send(
+        `<h1 style="display:grid;place-items:center;min-height:100vh;">No files were uploaded.</h1>`
+      );
+  }
   try {
-    const workbook = xlsx.readFile("./uploads/file.xlsx");
-    const sheetName = workbook.SheetNames[0];
-    const sheet = workbook.Sheets[sheetName];
-    const data = xlsx.utils.sheet_to_json(sheet);
     const currentUsers = [];
-    for (let i = 0; i < data.length; i++) {
-      const phone = data[i]["Phone 1 - Value"]?.toString().replace(/[ +]/g, "");
-      const groupName = data[i]["Group Membership"];
-      currentUsers.push({ phone, groupName });
-      // ----------------------------------------------------------
+    for (const file of files) {
+      console.log(file.path);
+      const workbook = xlsx.readFile(file.path);
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const data = xlsx.utils.sheet_to_json(sheet);
+      for (let i = 0; i < data.length; i++) {
+        const phone = data[i]["Phone 1 - Value"]
+          ?.toString()
+          .replace(/[ +]/g, "");
+        const groupName = data[i]["Group Membership"];
+        currentUsers.push({ phone, groupName });
+      }
+      await unlinkAsync(file.path);
     }
     const token = await getZohoToken();
     const config = {
@@ -127,13 +141,13 @@ app.post("/view", upload.single("file.xlsx"), async (req, res) => {
       result.push(data);
     }
     console.log(result);
-    res.send({ data: result });
-    await unlinkAsync(req.file.path);
-    return;
+    return res.send({ data: result });
   } catch (error) {
     console.error("Error reading Excel file:", error);
     res.status(500).send({ error: "Error reading Excel file." });
-    await unlinkAsync(req.file.path);
+    for (const file of files) {
+      await unlinkAsync(file.path);
+    }
     return;
   }
 });
