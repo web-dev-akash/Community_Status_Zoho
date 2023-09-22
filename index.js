@@ -97,7 +97,7 @@ const updateContactOnZoho = async ({ phone, config, group }) => {
   return { phone, message: "Success" };
 };
 
-app.post("/view", upload.array("file", 10), async (req, res) => {
+app.post("/view", upload.array("file", 50), async (req, res) => {
   const files = req.files;
   console.log(files);
   if (files.length === 0) {
