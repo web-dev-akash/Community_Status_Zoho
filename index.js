@@ -57,9 +57,8 @@ const updateContactOnZoho = async ({ phone, config, group }) => {
   if (!contact || !contact.data || !contact.data.data) {
     return { phone, message: "No Contact Found" };
   }
-  const key = group.includes("Wisechampions")
-    ? "Joined_Wisechampions"
-    : "Joined_Toppers_Club";
+  // const key = "Premium_Group";
+  const key = "Joined_Wisechampions";
   const contactId = contact.data.data[0].id;
   const alreadyJoined = contact.data.data[0][key];
   console.log(alreadyJoined);
