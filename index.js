@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
+const pLimit = require("p-limit");
 const axios = require("axios");
-const { google } = require("googleapis");
 const path = require("path");
 const xlsx = require("xlsx");
 const multer = require("multer");
@@ -9,6 +9,7 @@ const fs = require("fs");
 const { promisify } = require("util");
 const unlinkAsync = promisify(fs.unlink);
 require("dotenv").config();
+const limit = pLimit(20);
 const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
@@ -130,16 +131,20 @@ app.post("/view", upload.array("file", 50), async (req, res) => {
         "Content-Type": "application/json",
       },
     };
-    const result = [];
-    for (let i = 0; i < currentUsers.length; i++) {
-      const data = await updateContactOnZoho({
-        phone: currentUsers[i].phone,
-        group: currentUsers[i].groupName,
-        config,
-      });
-      result.push(data);
-    }
-    console.log(result);
+    const result = await Promise.all(
+      currentUsers.map(async (user) => {
+        const [data] = await Promise.all([
+          limit(() =>
+            updateContactOnZoho({
+              phone: user.phone,
+              group: user.groupName,
+              config,
+            })
+          ),
+        ]);
+        return data;
+      })
+    );
     return res.send({ data: result });
   } catch (error) {
     console.error("Error reading Excel file:", error);
