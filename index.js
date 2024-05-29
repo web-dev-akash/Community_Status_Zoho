@@ -116,9 +116,7 @@ app.post("/view", upload.array("file", 50), async (req, res) => {
       const sheet = workbook.Sheets[sheetName];
       const data = xlsx.utils.sheet_to_json(sheet);
       for (let i = 0; i < data.length; i++) {
-        const phone = data[i]["Phone 1 - Value"]
-          ?.toString()
-          .replace(/[ +]/g, "");
+        const phone = data[i]["Phone Numbers"]?.toString().replace(/[ +]/g, "");
         const groupName = data[i]["Group Membership"];
         currentUsers.push({ phone, groupName });
       }
